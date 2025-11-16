@@ -4,29 +4,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
 
-    static class User {
-        final int id;
-        final String name;
-        final String role;
-
-        User(int id, String name, String role) {
-            this.id = id;
-            this.name = name;
-            this.role = role;
-        }
-
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(id);
-            sb.append(" | ");
-            sb.append(name);
-            sb.append(" (");
-            sb.append(role);
-            sb.append(")");
-            return sb.toString();
-        }
-    }
-
     static class Grade {
         final int id;
         final int studentId;
@@ -53,17 +30,64 @@ public class Main {
         }
     }
 
-    static final ArrayList<User> users = new ArrayList<User>();
     static final ArrayList<Grade> grades = new ArrayList<Grade>();
-    static final AtomicInteger userSeq = new AtomicInteger(1);
     static final AtomicInteger gradeSeq = new AtomicInteger(1);
 
     public static void main(String[] args) {
-        User teacher = addUser("ivan", "teacher");
-        User student = addUser("petar", "student");
-        addGrade(student.id, "Mathematics", 5.5);
+        User teacher = Auth.register("ivan", "teacher", "pass");
+        User student = Auth.register("petar", "student", "p");
+        addGrade(student.getId(), "Mathematics", 5.5);
 
         Scanner scanner = new Scanner(System.in);
+
+        User current = null;
+
+        while (current == null) {
+            printAuthMenu();
+            String cmd = scanner.nextLine().trim();
+            if (cmd.equals("0")) {
+                System.out.println("Bye.");
+                scanner.close();
+                return;
+            } else if (cmd.equals("1")) {
+                System.out.print("Name: ");
+                String name = scanner.nextLine().trim();
+                String role;
+                while (true) {
+                    System.out.print("Role (student/teacher): ");
+                    role = scanner.nextLine().trim();
+                    String rl = role.toLowerCase();
+                    if (rl.equals("student") || rl.equals("teacher")) {
+                        role = rl;
+                        break;
+                    } else {
+                        System.out.println("Please enter 'student' or 'teacher'.");
+                    }
+                }
+                System.out.print("Password: ");
+                String password = scanner.nextLine().trim();
+                User newUser = Auth.register(name, role, password);
+                if (newUser == null) {
+                    System.out.println("Registration failed (name exists or invalid data).");
+                } else {
+                    System.out.println("Registered: " + newUser.toString());
+                }
+            } else if (cmd.equals("2")) {
+                System.out.print("Name: ");
+                String name = scanner.nextLine().trim();
+                System.out.print("Password: ");
+                String password = scanner.nextLine().trim();
+                User logged = Auth.login(name, password);
+                if (logged == null) {
+                    System.out.println("Invalid credentials.");
+                } else {
+                    current = logged;
+                    System.out.println("Logged in as: " + current.toString());
+                }
+            } else {
+                System.out.println("Unknown command");
+            }
+        }
 
         while (true) {
             printMenu();
@@ -71,13 +95,6 @@ public class Main {
             if (command.equals("0")) {
                 break;
             } else if (command.equals("1")) {
-                System.out.print("Name: ");
-                String name = scanner.nextLine().trim();
-                System.out.print("Role (student/teacher): ");
-                String role = scanner.nextLine().trim();
-                User newUser = addUser(name, role);
-                System.out.println("Added: " + newUser.toString());
-            } else if (command.equals("2")) {
                 System.out.print("Student id: ");
                 int sid = readInt(scanner);
                 System.out.print("Course name: ");
@@ -86,13 +103,13 @@ public class Main {
                 double val = readDouble(scanner);
                 Grade newGrade = addGrade(sid, cname, val);
                 System.out.println("Added: " + newGrade.toString());
-            } else if (command.equals("3")) {
+            } else if (command.equals("2")) {
                 listUsers();
-            } else if (command.equals("4")) {
+            } else if (command.equals("3")) {
                 listGrades();
-            } else if (command.equals("5")) {
+            } else if (command.equals("4")) {
                 printAverages();
-            } else if (command.equals("6")) {
+            } else if (command.equals("5")) {
                 System.out.print("Student name contains (empty = any): ");
                 String studentPart = scanner.nextLine().trim();
                 System.out.print("Course name contains (empty = any): ");
@@ -112,26 +129,25 @@ public class Main {
         System.out.println("Bye.");
     }
 
-    static void printMenu() {
+    static void printAuthMenu() {
         System.out.println();
-        System.out.println("--- Menu ---");
-        System.out.println("1 - Register user");
-        System.out.println("2 - Add grade");
-        System.out.println("3 - List users");
-        System.out.println("4 - List grades");
-        System.out.println("5 - Show average per course");
-        System.out.println("6 - Search grades");
+        System.out.println("--- Authentication ---");
+        System.out.println("1 - Register");
+        System.out.println("2 - Login");
         System.out.println("0 - Exit");
         System.out.print("Choose: ");
     }
 
-    static User addUser(String name, String role) {
-        int id = userSeq.getAndIncrement();
-        User u = new User(id, name, role);
-        synchronized (users) {
-            users.add(u);
-        }
-        return u;
+    static void printMenu() {
+        System.out.println();
+        System.out.println("--- Menu ---");
+        System.out.println("1 - Add grade");
+        System.out.println("2 - List users");
+        System.out.println("3 - List grades");
+        System.out.println("4 - Show average per course");
+        System.out.println("5 - Search grades");
+        System.out.println("0 - Exit");
+        System.out.print("Choose: ");
     }
 
     static Grade addGrade(int studentId, String courseName, double value) {
@@ -144,12 +160,11 @@ public class Main {
     }
 
     static void listUsers() {
-        synchronized (users) {
-            System.out.println("Users:");
-            for (int i = 0; i < users.size(); i++) {
-                User u = users.get(i);
-                System.out.println(u.toString());
-            }
+        ArrayList<User> list = Auth.getUsers();
+        System.out.println("Users:");
+        for (int i = 0; i < list.size(); i++) {
+            User u = list.get(i);
+            System.out.println(u.toString());
         }
     }
 
@@ -251,15 +266,11 @@ public class Main {
     }
 
     static String findUserNameById(int id) {
-        synchronized (users) {
-            for (int i = 0; i < users.size(); i++) {
-                User u = users.get(i);
-                if (u.id == id) {
-                    return u.name;
-                }
-            }
+        User u = Auth.findById(id);
+        if (u == null) {
+            return "unknown";
         }
-        return "unknown";
+        return u.getName();
     }
 
     static int readInt(Scanner sc) {
