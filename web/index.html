@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Grades Tracker - Auth Only</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Grades Tracker</h1>
+
+    <div id="auth" class="card">
+      <div class="tabs">
+        <button id="tab-login" class="tab active">Login</button>
+        <button id="tab-register" class="tab">Register</button>
+      </div>
+
+      <div id="login-panel" class="panel">
+        <div class="field">
+          <label>Name</label>
+          <input id="login-name" type="text" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="login-password" type="password" />
+        </div>
+        <div class="actions">
+          <button id="btn-login">Login</button>
+        </div>
+        <div id="login-msg" class="msg"></div>
+      </div>
+
+      <div id="register-panel" class="panel hidden">
+        <div class="field">
+          <label>Name</label>
+          <input id="reg-name" type="text" />
+        </div>
+        <div class="field">
+          <label>Role</label>
+          <div class="radio-row">
+            <label><input name="role" type="radio" value="student" /> Student</label>
+            <label><input name="role" type="radio" value="teacher" /> Teacher</label>
+          </div>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="reg-password" type="password" />
+        </div>
+        <div class="actions">
+          <button id="btn-register">Register</button>
+        </div>
+        <div id="reg-msg" class="msg"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

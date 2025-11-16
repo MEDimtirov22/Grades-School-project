@@ -1,4 +1,4 @@
-<h1 align="center">Grades-School-Project</h1>
+<h1 align="center">School-Grades-Project</h1>
 
 <br>
 <p align="center">
