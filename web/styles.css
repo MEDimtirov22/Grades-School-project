@@ -6,7 +6,7 @@ body {
   padding: 20px;
 }
 .container {
-  max-width: 560px;
+  max-width: 760px;
   margin: 0 auto;
 }
 h1 {
@@ -45,7 +45,8 @@ h1 {
   margin-bottom: 4px;
 }
 .field input[type="text"],
-.field input[type="password"] {
+.field input[type="password"],
+.field input[type="number"] {
   width: 100%;
   padding: 8px;
   border: 1px solid #dfe7fb;
@@ -78,8 +79,26 @@ h1 {
 .hidden {
   display: none;
 }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.results {
+  margin-top: 12px;
+}
+.result-item {
+  padding: 8px;
+  border-bottom: 1px solid #f0f2f7;
+  font-size: 14px;
+}
 .small {
   font-size: 12px;
   color: #555;
-  margin-top: 8px;
 }
