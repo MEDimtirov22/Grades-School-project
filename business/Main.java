@@ -1,3 +1,5 @@
+package business;
+
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;

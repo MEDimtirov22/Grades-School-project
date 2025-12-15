@@ -2,7 +2,7 @@
 
 <br>
 <p align="center">
-    <img src="./images/School-grades project.png" alt="Extracurricular Grades Tracker" width="525" />
+    <img src="./docs/logo.png" alt="Extracurricular Grades Tracker" width="525" />
 </p>
 <br>
 
