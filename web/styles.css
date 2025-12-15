@@ -97,8 +97,91 @@ h1 {
   padding: 8px;
   border-bottom: 1px solid #f0f2f7;
   font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.small {
+.result-left {
+  display: inline-block;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.result-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-small {
+  padding: 4px 8px;
   font-size: 12px;
-  color: #555;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.btn-edit {
+  background: #f59e0b;
+  color: white;
+  border-color: #d97706;
+}
+.btn-delete {
+  background: #ef4444;
+  color: white;
+  border-color: #dc2626;
+}
+.btn-save {
+  background: #16a34a;
+  color: white;
+  border-color: #15803d;
+}
+.btn-cancel {
+  background: #6b7280;
+  color: white;
+  border-color: #4b5563;
+}
+.btn-small:hover {
+  opacity: 0.95;
+}
+
+.inline-edit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+.inline-edit input[type="text"],
+.inline-edit input[type="number"] {
+  padding: 6px;
+  border: 1px solid #dfe7fb;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+.inline-edit .edit-student {
+  width: 36%;
+}
+.inline-edit .edit-course {
+  width: 36%;
+}
+.inline-edit .edit-value {
+  width: 12%;
+}
+
+.inline-msg {
+  color: #b02a37;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.welcome .role-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 12px;
+  color: #fff;
+  background: #4a5568;
+  padding: 2px 6px;
+  border-radius: 4px;
 }

@@ -1,6 +1,7 @@
 (function() {
   var STORAGE_USERS = "gt_users_v1";
   var STORAGE_GRADES = "gt_grades_v1";
+  var CURRENT_USER = null;
 
   function readJson(key) {
     var raw = localStorage.getItem(key);
@@ -54,6 +55,16 @@
     var users = getUsers();
     for (var i = 0; i < users.length; i++) {
       if (users[i].name === name) {
+        return users[i];
+      }
+    }
+    return null;
+  }
+
+  function findUserById(id) {
+    var users = getUsers();
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].id === id) {
         return users[i];
       }
     }
@@ -129,6 +140,49 @@
     var gid = nextGradeId();
     var grades = getGrades();
     grades.push({ id: gid, studentId: student.id, course: course, value: Number(value) });
+    writeJson(STORAGE_GRADES, grades);
+    return { ok: true };
+  }
+
+  function updateGrade(id, studentName, course, value) {
+    var grades = getGrades();
+    var found = false;
+    for (var i = 0; i < grades.length; i++) {
+      if (grades[i].id === id) {
+        found = true;
+        var student = findUserByName(studentName);
+        if (student === null) {
+          return { ok: false, message: "Student not found." };
+        }
+        if (student.role !== "student") {
+          return { ok: false, message: "Provided user is not a student." };
+        }
+        grades[i].studentId = student.id;
+        grades[i].course = course;
+        grades[i].value = Number(value);
+        break;
+      }
+    }
+    if (!found) {
+      return { ok: false, message: "Grade not found." };
+    }
+    writeJson(STORAGE_GRADES, grades);
+    return { ok: true };
+  }
+
+  function deleteGrade(id) {
+    var grades = getGrades();
+    var idx = -1;
+    for (var i = 0; i < grades.length; i++) {
+      if (grades[i].id === id) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx === -1) {
+      return { ok: false, message: "Grade not found." };
+    }
+    grades.splice(idx, 1);
     writeJson(STORAGE_GRADES, grades);
     return { ok: true };
   }
@@ -223,12 +277,125 @@
       return;
     }
     for (var i = 0; i < items.length; i++) {
-      var el = document.createElement("div");
-      el.className = "result-item";
-      var grade = items[i].grade;
-      el.textContent = items[i].studentName + " | " + grade.course + " = " + grade.value;
-      area.appendChild(el);
+      (function() {
+        var idx = i;
+        var el = document.createElement("div");
+        el.className = "result-item";
+
+        var left = document.createElement("div");
+        left.className = "result-left";
+        var grade = items[idx].grade;
+        left.textContent = items[idx].studentName + " | " + grade.course + " = " + grade.value;
+        el.appendChild(left);
+
+        if (CURRENT_USER !== null && CURRENT_USER.role === "teacher") {
+          var actions = document.createElement("div");
+          actions.className = "result-actions";
+
+          var btnEdit = document.createElement("button");
+          btnEdit.className = "btn-small btn-edit";
+          btnEdit.textContent = "Edit";
+          btnEdit.addEventListener("click", function() {
+            startInlineEdit(el, items[idx]);
+          });
+          actions.appendChild(btnEdit);
+
+          var btnDelete = document.createElement("button");
+          btnDelete.className = "btn-small btn-delete";
+          btnDelete.textContent = "Delete";
+          btnDelete.addEventListener("click", function() {
+            var ok = window.confirm("Delete this grade?");
+            if (!ok) {
+              return;
+            }
+            var res = deleteGrade(grade.id);
+            if (res.ok) {
+              renderAverages();
+              var all = searchGrades("", "");
+              renderResults(all);
+            } else {
+              window.alert("Delete failed: " + res.message);
+            }
+          });
+          actions.appendChild(btnDelete);
+
+          el.appendChild(actions);
+        }
+
+        area.appendChild(el);
+      })();
     }
+  }
+
+  function startInlineEdit(containerEl, item) {
+    clearChildren(containerEl);
+    var grade = item.grade;
+    var currentStudentName = item.studentName;
+    var currentCourse = grade.course;
+    var currentValue = grade.value;
+
+    var form = document.createElement("div");
+    form.className = "inline-edit";
+
+    var inStudent = document.createElement("input");
+    inStudent.type = "text";
+    inStudent.value = currentStudentName;
+    inStudent.className = "edit-student";
+    form.appendChild(inStudent);
+
+    var inCourse = document.createElement("input");
+    inCourse.type = "text";
+    inCourse.value = currentCourse;
+    inCourse.className = "edit-course";
+    form.appendChild(inCourse);
+
+    var inValue = document.createElement("input");
+    inValue.type = "number";
+    inValue.step = "0.1";
+    inValue.min = "2";
+    inValue.max = "6";
+    inValue.value = currentValue;
+    inValue.className = "edit-value";
+    form.appendChild(inValue);
+
+    var saveBtn = document.createElement("button");
+    saveBtn.className = "btn-small btn-save";
+    saveBtn.textContent = "Save";
+    form.appendChild(saveBtn);
+
+    var cancelBtn = document.createElement("button");
+    cancelBtn.className = "btn-small btn-cancel";
+    cancelBtn.textContent = "Cancel";
+    form.appendChild(cancelBtn);
+
+    containerEl.appendChild(form);
+
+    var msg = document.createElement("div");
+    msg.className = "inline-msg";
+    containerEl.appendChild(msg);
+
+    saveBtn.addEventListener("click", function() {
+      var newStudent = inStudent.value.trim();
+      var newCourse = inCourse.value.trim();
+      var newValue = Number(inValue.value);
+      if (!newStudent || !newCourse || isNaN(newValue)) {
+        msg.textContent = "All fields are required and value must be a number.";
+        return;
+      }
+      var res = updateGrade(grade.id, newStudent, newCourse, newValue);
+      if (res.ok) {
+        renderAverages();
+        var all = searchGrades("", "");
+        renderResults(all);
+      } else {
+        msg.textContent = res.message;
+      }
+    });
+
+    cancelBtn.addEventListener("click", function() {
+      var all = searchGrades("", "");
+      renderResults(all);
+    });
   }
 
   function bind() {
@@ -297,6 +464,7 @@
       $("login-password").value = "";
       $("login-msg").textContent = "";
       $("reg-msg").textContent = "";
+      CURRENT_USER = null;
     });
 
     $("btn-add-grade").addEventListener("click", function() {
@@ -311,6 +479,8 @@
         $("grade-course").value = "";
         $("grade-value").value = "";
         renderAverages();
+        var all = searchGrades("", "");
+        renderResults(all);
       } else {
         $("addgrade-msg").style.color = "#b02a37";
         $("addgrade-msg").textContent = res.message;
@@ -331,6 +501,7 @@
   }
 
   function startAppFor(user) {
+    CURRENT_USER = user;
     hide($("auth"));
     show($("app"));
     $("login-msg").textContent = "";
