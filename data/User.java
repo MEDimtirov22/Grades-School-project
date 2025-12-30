@@ -13,30 +13,12 @@ public class User {
         this.password = password;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public String getPassword() {
-        return password;
-    }
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getRole() { return role; }
+    public String getPassword() { return password; }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(id);
-        sb.append(" | ");
-        sb.append(name);
-        sb.append(" (");
-        sb.append(role);
-        sb.append(")");
-        return sb.toString();
+        return id + " | " + name + " (" + role + ")";
     }
 }

@@ -1,115 +1,110 @@
 package business;
 
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.io.*;
+import data.User;
+import presentation.AuthService;
 
 public class GradeService {
 
-    public static final String GRADE_FILE = "data/grades.txt";
-
     private static final ArrayList<Grade> grades = new ArrayList<>();
     private static final AtomicInteger gradeSeq = new AtomicInteger(1);
+    private static final String FILE = "data/grades.txt";
 
     public static class Grade {
         public final int id, studentId;
-        public final String courseName;
+        public final String course;
         public final double value;
 
-        public Grade(int id, int studentId, String courseName, double value) {
+        public Grade(int id, int sid, String course, double value) {
             this.id = id;
-            this.studentId = studentId;
-            this.courseName = courseName;
+            this.studentId = sid;
+            this.course = course;
             this.value = value;
         }
 
         public String toString() {
-            return id + " | studentId=" + studentId + " | " + courseName + " = " + value;
+            User s = AuthService.findById(studentId);
+            return id + " | " + (s != null ? s.getName() : "unknown")
+                    + " | " + course + " = " + value;
         }
     }
 
-    public static Grade addGrade(int sid, String cname, double val) {
-        Grade g = new Grade(gradeSeq.getAndIncrement(), sid, cname, val);
-        grades.add(g);
-        return g;
+    public static boolean validGrade(double v) {
+        return v >= 2.0 && v <= 6.0;
     }
 
-    public static boolean updateGrade(int id, double val) {
-        for (int i = 0; i < grades.size(); i++) {
-            Grade g = grades.get(i);
-            if (g.id == id) {
-                grades.set(i, new Grade(id, g.studentId, g.courseName, val));
+    public static void addGrade(int sid, String course, double v) {
+        grades.add(new Grade(gradeSeq.getAndIncrement(), sid, course, v));
+        saveGrades();
+    }
+
+    public static ArrayList<Grade> getAllGrades() {
+        grades.sort(Comparator.comparingInt(g -> g.id));
+        return new ArrayList<>(grades);
+    }
+
+    public static ArrayList<Grade> getGradesByStudent(int sid) {
+        ArrayList<Grade> out = new ArrayList<>();
+        for (Grade g : grades) if (g.studentId == sid) out.add(g);
+        return out;
+    }
+
+    public static boolean updateGrade(int id, double v) {
+        for (int i = 0; i < grades.size(); i++)
+            if (grades.get(i).id == id) {
+                Grade g = grades.get(i);
+                grades.set(i, new Grade(id, g.studentId, g.course, v));
+                saveGrades();
                 return true;
             }
-        }
         return false;
     }
 
     public static boolean deleteGrade(int id) {
-        for (int i = 0; i < grades.size(); i++) {
-            if (grades.get(i).id == id) {
-                grades.remove(i);
-                return true;
-            }
-        }
-        return false;
+        boolean r = grades.removeIf(g -> g.id == id);
+        if (r) saveGrades();
+        return r;
     }
 
-    public static ArrayList<Grade> getAllGrades() {
-        return new ArrayList<>(grades);
-    }
-
-    public static ArrayList<Grade> getGradesByStudent(int studentId) {
-        ArrayList<Grade> out = new ArrayList<>();
-        for (Grade g : grades) if (g.studentId == studentId) out.add(g);
-        return out;
-    }
-
-    public static double getAverageByStudent(int studentId) {
-        double sum = 0; int cnt = 0;
-        for (Grade g : grades) if (g.studentId == studentId) { sum += g.value; cnt++; }
-        return cnt == 0 ? 0 : sum / cnt;
-    }
-
-    public static void printAveragePerCourse() {
-        ArrayList<String> courses = new ArrayList<>();
-        for (Grade g : grades) if (!courses.contains(g.courseName)) courses.add(g.courseName);
-
-        for (String c : courses) {
-            double sum = 0; int cnt = 0;
-            for (Grade g : grades) if (g.courseName.equals(c)) { sum += g.value; cnt++; }
-            System.out.printf("%s => %.2f%n", c, sum / cnt);
-        }
+    public static double getAverage(int sid) {
+        double sum = 0; int c = 0;
+        for (Grade g : grades)
+            if (g.studentId == sid) { sum += g.value; c++; }
+        return c == 0 ? 0 : sum / c;
     }
 
     public static void saveGrades() {
         try {
-            File dir = new File("data"); if (!dir.exists()) dir.mkdir();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(GRADE_FILE));
+            File dir = new File("data");
+            if (!dir.exists()) dir.mkdir();
+            BufferedWriter bw = new BufferedWriter(new FileWriter(FILE));
             for (Grade g : grades)
-                bw.write(g.id + "|" + g.studentId + "|" + g.courseName + "|" + g.value + "\n");
+                bw.write(g.id + "|" + g.studentId + "|" + g.course + "|" + g.value + "\n");
             bw.close();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) { }
     }
 
     public static void loadGrades() {
-        File f = new File(GRADE_FILE);
+        File f = new File(FILE);
         if (!f.exists()) return;
         try {
             BufferedReader br = new BufferedReader(new FileReader(f));
-            String line; int maxId = 0;
+            String line; int max = 0;
             while ((line = br.readLine()) != null) {
                 String[] p = line.split("\\|");
-                if (p.length != 4) continue;
-                int id = Integer.parseInt(p[0]);
-                int sid = Integer.parseInt(p[1]);
-                String cname = p[2];
-                double val = Double.parseDouble(p[3]);
-                grades.add(new Grade(id, sid, cname, val));
-                if (id > maxId) maxId = id;
+                Grade g = new Grade(
+                        Integer.parseInt(p[0]),
+                        Integer.parseInt(p[1]),
+                        p[2],
+                        Double.parseDouble(p[3])
+                );
+                grades.add(g);
+                max = Math.max(max, g.id);
             }
-            gradeSeq.set(maxId + 1);
+            gradeSeq.set(max + 1);
             br.close();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) { }
     }
 }
