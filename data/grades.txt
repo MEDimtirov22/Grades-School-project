@@ -1,3 +1,4 @@
-3|1|Maths|5.0
-4|4|English|3.0
-5|1|Japanese|5.5
+1|1|Maths|5.0
+2|1|Japanese|5.5
+3|1|Biology|6.0
+4|1|Bulgarian|4.3

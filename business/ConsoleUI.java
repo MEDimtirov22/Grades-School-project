@@ -22,7 +22,10 @@ public class ConsoleUI {
                 System.out.print("Choice: ");
                 String c = sc.nextLine();
 
-                if (c.equals("0")) return;
+                if (c.equals("0")) {
+                    sc.close();
+                    return;
+                }
 
                 if (c.equals("1")) {
                     System.out.print("Name: ");
@@ -34,14 +37,15 @@ public class ConsoleUI {
 
                     int res = AuthService.register(n, r, p);
 
-                    if (res == 1)
+                    if (res == 1) {
                         System.out.println("Registered successfully.");
-                    else if (res == 0)
+                    } else if (res == 0) {
                         System.out.println("Such account already exists.");
-                    else if (res == -1)
+                    } else if (res == -1) {
                         System.out.println("Invalid role. Please enter student or teacher.");
-                    else
+                    } else {
                         System.out.println("Invalid data. Name and password cannot be empty.");
+                    }
                 }
 
                 if (c.equals("2")) {
@@ -53,15 +57,17 @@ public class ConsoleUI {
                     String p = sc.nextLine();
 
                     current = AuthService.login(n, p, r);
-                    if (current == null)
+                    if (current == null) {
                         System.out.println("Invalid credentials.");
+                    }
                 }
             }
 
-            if (current.getRole().equals("teacher"))
+            if (current.getRole().equals("teacher")) {
                 teacherMenu(sc, current);
-            else
+            } else {
                 studentMenu(sc, current);
+            }
         }
     }
 
@@ -83,9 +89,11 @@ public class ConsoleUI {
 
             if (c.equals("1")) {
                 System.out.println("0 - Back");
-                AuthService.getAllUsers().stream()
-                        .filter(u -> u.getRole().equals("student"))
-                        .forEach(System.out::println);
+                for (User u : AuthService.getAllUsers()) {
+                    if (u.getRole().equals("student")) {
+                        System.out.println(u);
+                    }
+                }
 
                 int sid = readInt(sc);
                 if (sid == 0) continue;
@@ -111,7 +119,9 @@ public class ConsoleUI {
             }
 
             if (c.equals("2")) {
-                GradeService.getAllGrades().forEach(System.out::println);
+                for (var g : GradeService.getAllGrades()) {
+                    System.out.println(g);
+                }
                 System.out.print("Grade ID (0-back): ");
                 int id = readInt(sc);
                 if (id == 0) continue;
@@ -123,44 +133,75 @@ public class ConsoleUI {
                     continue;
                 }
 
-                System.out.println(
-                        GradeService.updateGrade(id, v) ? "Updated." : "Grade not found."
-                );
+                boolean updated;
+                try {
+                    updated = GradeService.updateGrade(id, v);
+                } catch (Exception ex) {
+                    System.out.println("An error occurred while updating the grade.");
+                    continue;
+                }
+                System.out.println(updated ? "Updated." : "Grade not found.");
             }
 
             if (c.equals("3")) {
-                GradeService.getAllGrades().forEach(System.out::println);
+                for (var g : GradeService.getAllGrades()) {
+                    System.out.println(g);
+                }
                 System.out.print("Grade ID (0-back): ");
                 int id = readInt(sc);
-                if (id != 0)
-                    System.out.println(
-                            GradeService.deleteGrade(id) ? "Deleted." : "Grade not found."
-                    );
+                if (id != 0) {
+                    boolean deleted;
+                    try {
+                        deleted = GradeService.deleteGrade(id);
+                    } catch (Exception ex) {
+                        System.out.println("An error occurred while deleting the grade.");
+                        continue;
+                    }
+                    System.out.println(deleted ? "Deleted." : "Grade not found.");
+                }
             }
 
-            if (c.equals("4"))
-                GradeService.getAllGrades().forEach(System.out::println);
+            if (c.equals("4")) {
+                for (var g : GradeService.getAllGrades()) {
+                    System.out.println(g);
+                }
+            }
 
-            if (c.equals("5"))
-                AuthService.getAllUsers().forEach(System.out::println);
+            if (c.equals("5")) {
+                for (var u : AuthService.getAllUsers()) {
+                    System.out.println(u);
+                }
+            }
 
             if (c.equals("6")) {
-                AuthService.getAllUsers().forEach(System.out::println);
+                for (var u : AuthService.getAllUsers()) {
+                    System.out.println(u);
+                }
                 System.out.print("User ID (0-back): ");
                 int id = readInt(sc);
-                if (id != 0)
-                    System.out.println(
-                            AuthService.deleteUser(id) ? "User deleted." : "User not found."
-                    );
+                if (id != 0) {
+                    boolean deleted;
+                    try {
+                        deleted = AuthService.deleteUser(id);
+                    } catch (Exception ex) {
+                        System.out.println("An error occurred while deleting the user.");
+                        continue;
+                    }
+                    System.out.println(deleted ? "User deleted." : "User not found.");
+                }
             }
 
             if (c.equals("7")) {
                 System.out.print("New password: ");
-                System.out.println(
-                        AuthService.changePassword(t.getId(), sc.nextLine())
-                                ? "Password changed."
-                                : "Invalid password."
-                );
+                String newPass = sc.nextLine();
+                boolean changed;
+                try {
+                    changed = AuthService.changePassword(t.getId(), newPass);
+                } catch (Exception ex) {
+                    System.out.println("An error occurred while changing password.");
+                    continue;
+                }
+                System.out.println(changed ? "Password changed." : "Invalid password.");
             }
         }
     }
@@ -179,35 +220,66 @@ public class ConsoleUI {
 
             if (c.equals("1")) {
                 var g = GradeService.getGradesByStudent(u.getId());
-                if (g.isEmpty())
+                if (g.isEmpty()) {
                     System.out.println("No grades.");
-                else
-                    g.forEach(System.out::println);
+                } else {
+                    for (var grade : g) {
+                        System.out.println(grade);
+                    }
+                }
             }
 
             if (c.equals("2")) {
-                double avg = GradeService.getAverage(u.getId());
-                System.out.println(avg == 0 ? "No grades." : "Average: " + avg);
+                double avg;
+                try {
+                    avg = GradeService.getAverage(u.getId());
+                } catch (Exception ex) {
+                    System.out.println("An error occurred while calculating the average.");
+                    continue;
+                }
+                if (avg == 0) {
+                    System.out.println("No grades.");
+                } else {
+                    System.out.println("Average: " + avg);
+                }
             }
 
             if (c.equals("3")) {
                 System.out.print("New password: ");
-                System.out.println(
-                        AuthService.changePassword(u.getId(), sc.nextLine())
-                                ? "Password changed."
-                                : "Invalid password."
-                );
+                String newPass = sc.nextLine();
+                boolean changed;
+                try {
+                    changed = AuthService.changePassword(u.getId(), newPass);
+                } catch (Exception ex) {
+                    System.out.println("An error occurred while changing password.");
+                    continue;
+                }
+                System.out.println(changed ? "Password changed." : "Invalid password.");
             }
         }
     }
 
     private static int readInt(Scanner sc) {
-        try { return Integer.parseInt(sc.nextLine()); }
-        catch (Exception e) { return -1; }
+        int value;
+        try {
+            String line = sc.nextLine();
+            value = Integer.parseInt(line);
+        } catch (NumberFormatException e) {
+            System.out.println("Please enter a valid integer.");
+            value = -1;
+        }
+        return value;
     }
 
     private static double readDouble(Scanner sc) {
-        try { return Double.parseDouble(sc.nextLine()); }
-        catch (Exception e) { return -1; }
+        double value;
+        try {
+            String line = sc.nextLine();
+            value = Double.parseDouble(line);
+        } catch (NumberFormatException e) {
+            System.out.println("Please enter a valid decimal number.");
+            value = -1;
+        }
+        return value;
     }
 }

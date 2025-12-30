@@ -13,10 +13,19 @@ public class User {
         this.password = password;
     }
 
-    public int getId() { return id; }
-    public String getName() { return name; }
-    public String getRole() { return role; }
-    public String getPassword() { return password; }
+    public int getId() { 
+        return id; 
+    }
+    public String getName() { 
+        return name;
+     }
+    public String getRole() {
+         return role; 
+
+    }
+    public String getPassword() {
+         return password; 
+        }
 
     public String toString() {
         return id + " | " + name + " (" + role + ")";
