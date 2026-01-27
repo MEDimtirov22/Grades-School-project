@@ -1,3 +1,7 @@
 1|Angel|student|pass
 2|Petar|student|pass
+<<<<<<< HEAD
 3|Marto|teacher|pass
+=======
+3|Marto|teacher|pass
+>>>>>>> 02bf6f3dc7a877502f20acbc9425b08dbebcbff7
