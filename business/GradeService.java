@@ -1,20 +1,23 @@
 package business;
 
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.io.*;
+import presentation.AuthService;
+import data.User;
 
 public class GradeService {
 
-    public static final String GRADE_FILE = "data/grades.txt";
+    private static CopyOnWriteArrayList<Grade> grades = new CopyOnWriteArrayList<>();
+    private static String GRADE_FILE = "data/grades.txt";
 
-    private static final ArrayList<Grade> grades = new ArrayList<>();
-    private static final AtomicInteger gradeSeq = new AtomicInteger(1);
+    private static Object fileLock = new Object();
 
     public static class Grade {
-        public final int id, studentId;
-        public final String courseName;
-        public final double value;
+        public int id;
+        public int studentId;
+        public String courseName;
+        public double value;
 
         public Grade(int id, int studentId, String courseName, double value) {
             this.id = id;
@@ -24,35 +27,55 @@ public class GradeService {
         }
 
         public String toString() {
-            return id + " | studentId=" + studentId + " | " + courseName + " = " + value;
+            User s = AuthService.findById(studentId);
+            String studentName = (s != null) ? s.getName() : "unknown";
+            return id + " | " + studentName + " | " + courseName + " = " + value;
         }
+    }
+
+    public static boolean validGrade(double v) {
+        return v >= 2.0 && v <= 6.0;
     }
 
     public static Grade addGrade(int sid, String cname, double val) {
-        Grade g = new Grade(gradeSeq.getAndIncrement(), sid, cname, val);
-        grades.add(g);
-        return g;
+        synchronized (fileLock) {
+            Grade g = new Grade(grades.size() + 1, sid, cname, val);
+            grades.add(g);
+            saveGrades();
+            return g;
+        }
     }
 
     public static boolean updateGrade(int id, double val) {
-        for (int i = 0; i < grades.size(); i++) {
-            Grade g = grades.get(i);
-            if (g.id == id) {
-                grades.set(i, new Grade(id, g.studentId, g.courseName, val));
-                return true;
+        synchronized (fileLock) {
+            for (int i = 0; i < grades.size(); i++) {
+                Grade g = grades.get(i);
+                if (g.id == id) {
+                    grades.set(i, new Grade(id, g.studentId, g.courseName, val));
+                    saveGrades();
+                    return true;
+                }
             }
+            return false;
         }
-        return false;
     }
 
     public static boolean deleteGrade(int id) {
-        for (int i = 0; i < grades.size(); i++) {
-            if (grades.get(i).id == id) {
-                grades.remove(i);
-                return true;
+        synchronized (fileLock) {
+            boolean removed = grades.removeIf(g -> g.id == id);
+            if (removed) {
+                reassignIds();
             }
+            saveGrades();
+            return removed;
         }
-        return false;
+    }
+
+    private static void reassignIds() {
+        for (int i = 0; i < grades.size(); i++) {
+            Grade g = grades.get(i);
+            grades.set(i, new Grade(i + 1, g.studentId, g.courseName, g.value));
+        }
     }
 
     public static ArrayList<Grade> getAllGrades() {
@@ -61,55 +84,121 @@ public class GradeService {
 
     public static ArrayList<Grade> getGradesByStudent(int studentId) {
         ArrayList<Grade> out = new ArrayList<>();
-        for (Grade g : grades) if (g.studentId == studentId) out.add(g);
+        for (Grade g : grades) {
+            if (g.studentId == studentId) {
+                out.add(g);
+            }
+        }
         return out;
     }
 
-    public static double getAverageByStudent(int studentId) {
-        double sum = 0; int cnt = 0;
-        for (Grade g : grades) if (g.studentId == studentId) { sum += g.value; cnt++; }
-        return cnt == 0 ? 0 : sum / cnt;
+    public static double getAverage(int studentId) {
+        double sum = 0;
+        int count = 0;
+        for (Grade g : grades) {
+            if (g.studentId == studentId) {
+                sum += g.value;
+                count++;
+            }
+        }
+        if (count == 0) {
+            return 0;
+        } else {
+            return sum / count;
+        }
     }
 
     public static void printAveragePerCourse() {
         ArrayList<String> courses = new ArrayList<>();
-        for (Grade g : grades) if (!courses.contains(g.courseName)) courses.add(g.courseName);
+        for (Grade g : grades) {
+            if (!courses.contains(g.courseName)) {
+                courses.add(g.courseName);
+            }
+        }
 
         for (String c : courses) {
-            double sum = 0; int cnt = 0;
-            for (Grade g : grades) if (g.courseName.equals(c)) { sum += g.value; cnt++; }
-            System.out.printf("%s => %.2f%n", c, sum / cnt);
+            double sum = 0;
+            int count = 0;
+            for (Grade g : grades) {
+                if (g.courseName.equals(c)) {
+                    sum += g.value;
+                    count++;
+                }
+            }
+            if (count == 0) {
+                System.out.printf("%s => 0%n", c);
+            } else {
+                System.out.printf("%s => %.2f%n", c, sum / count);
+            }
         }
     }
 
     public static void saveGrades() {
-        try {
-            File dir = new File("data"); if (!dir.exists()) dir.mkdir();
-            BufferedWriter bw = new BufferedWriter(new FileWriter(GRADE_FILE));
-            for (Grade g : grades)
-                bw.write(g.id + "|" + g.studentId + "|" + g.courseName + "|" + g.value + "\n");
-            bw.close();
-        } catch (Exception e) { e.printStackTrace(); }
+        synchronized (fileLock) {
+            try {
+                File dir = new File("data");
+                if (!dir.exists()) {
+                    boolean created = dir.mkdir();
+                    if (!created) {
+                        System.out.println("Failed to create data directory.");
+                        return;
+                    }
+                }
+
+                BufferedWriter bw = new BufferedWriter(new FileWriter(GRADE_FILE));
+                for (Grade g : grades) {
+                    bw.write(g.id + "|" + g.studentId + "|" + g.courseName + "|" + g.value);
+                    bw.newLine();
+                }
+                bw.close();
+            } catch (IOException e) {
+                System.out.println("Failed to save grades due to an I/O error: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Failed to save grades: " + e.getMessage());
+            }
+        }
     }
 
     public static void loadGrades() {
-        File f = new File(GRADE_FILE);
-        if (!f.exists()) return;
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(f));
-            String line; int maxId = 0;
-            while ((line = br.readLine()) != null) {
-                String[] p = line.split("\\|");
-                if (p.length != 4) continue;
-                int id = Integer.parseInt(p[0]);
-                int sid = Integer.parseInt(p[1]);
-                String cname = p[2];
-                double val = Double.parseDouble(p[3]);
-                grades.add(new Grade(id, sid, cname, val));
-                if (id > maxId) maxId = id;
+        synchronized (fileLock) {
+            File f = new File(GRADE_FILE);
+            if (!f.exists()) {
+                return;
             }
-            gradeSeq.set(maxId + 1);
-            br.close();
-        } catch (Exception e) { e.printStackTrace(); }
+
+            try {
+                BufferedReader br = new BufferedReader(new FileReader(f));
+                String line;
+                grades.clear();
+
+                while ((line = br.readLine()) != null) {
+                    String[] p = line.split("\\|");
+                    if (p.length != 4) {
+                        System.out.println("Skipping invalid line in grades file: " + line);
+                        continue;
+                    }
+                    int sid;
+                    double val;
+                    try {
+                        sid = Integer.parseInt(p[1]);
+                        val = Double.parseDouble(p[3]);
+                    } catch (NumberFormatException nfe) {
+                        System.out.println("Skipping line with invalid numbers: " + line);
+                        continue;
+                    }
+                    String cname = p[2];
+                    grades.add(new Grade(0, sid, cname, val));
+                }
+
+                reassignIds();
+                br.close();
+            } catch (FileNotFoundException e) {
+                System.out.println("Grades file not found: " + e.getMessage());
+            } catch (IOException e) {
+                System.out.println("Failed to load grades due to an I/O error: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Failed to load grades: " + e.getMessage());
+            }
+        }
     }
 }

@@ -26,9 +26,6 @@
 <p align="left">
     <a href="https://www.oracle.com/java/"><img src="https://raw.githubusercontent.com/github/explore/main/topics/java/java.png" alt="Java" width=48px /></a>
     <a href="https://en.wikipedia.org/wiki/SQL"><img src="https://raw.githubusercontent.com/github/explore/main/topics/sql/sql.png" alt="SQL" width=48px /></a>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML"><img src="https://raw.githubusercontent.com/github/explore/main/topics/html/html.png" alt="HTML" width=48px /></a>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS"><img src="https://raw.githubusercontent.com/github/explore/main/topics/css/css.png" alt="CSS" width=48px /></a>
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"><img src="https://raw.githubusercontent.com/github/explore/main/topics/javascript/javascript.png" alt="JavaScript" width=48px /></a>
 </p>
 
 ### Used tools for our documentation, presentation & communication

@@ -1,10 +1,10 @@
 package data;
 
 public class User {
-    private final int id;
-    private final String name;
-    private final String role;
-    private final String password;
+    private int id;
+    private String name;
+    private String role;
+    private String password;
 
     public User(int id, String name, String role, String password) {
         this.id = id;
@@ -13,30 +13,21 @@ public class User {
         this.password = password;
     }
 
-    public int getId() {
-        return id;
+    public int getId() { 
+        return id; 
     }
-
-    public String getName() {
+    public String getName() { 
         return name;
-    }
-
+     }
     public String getRole() {
-        return role;
-    }
+         return role; 
 
-    public String getPassword() {
-        return password;
     }
+    public String getPassword() {
+         return password; 
+        }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(id);
-        sb.append(" | ");
-        sb.append(name);
-        sb.append(" (");
-        sb.append(role);
-        sb.append(")");
-        return sb.toString();
+        return id + " | " + name + " (" + role + ")";
     }
 }

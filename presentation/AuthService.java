@@ -2,43 +2,78 @@ package presentation;
 
 import data.User;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.io.*;
 
 public class AuthService {
 
-    private static final ArrayList<User> users = new ArrayList<>();
-    private static final AtomicInteger userSeq = new AtomicInteger(1);
-    private static final String USER_FILE = "data/users.txt";
+    private static ArrayList<User> users = new ArrayList<>();
+    private static String USER_FILE = "data/users.txt";
 
-    public static synchronized User register(String name, String role, String password) {
-        if (name == null || role == null) return null;
+    public static synchronized int register(String name, String role, String password) {
+        if (name == null || name.isBlank() || password == null || password.isBlank()) {
+            return -2;
+        }
+
+        if (role == null) {
+            return -1;
+        }
         role = role.toLowerCase();
-        if (!role.equals("student") && !role.equals("teacher")) return null;
-        for (User u : users) if (u.getName().equals(name)) return null;
-        User nu = new User(userSeq.getAndIncrement(), name, role, password);
+
+        if (!role.equals("student") && !role.equals("teacher")) {
+            return -1;
+        }
+
+        for (User u : users) {
+            if (u.getName().equals(name) && u.getRole().equals(role)) {
+                return 0;
+            }
+        }
+
+        int newId = users.size() + 1;
+        User nu = new User(newId, name, role, password);
         users.add(nu);
-        return nu;
+        saveUsers();
+        return 1;
     }
 
-    public static synchronized User login(String name, String password) {
-        for (User u : users)
-            if (u.getName().equals(name) && u.getPassword().equals(password))
+    public static synchronized User login(String name, String password, String role) {
+        for (User u : users) {
+            if (u.getName().equals(name) && u.getPassword().equals(password) && u.getRole().equals(role)) {
                 return u;
+            }
+        }
         return null;
     }
 
     public static synchronized boolean deleteUser(int id) {
-        for (int i = 0; i < users.size(); i++)
-            if (users.get(i).getId() == id) { users.remove(i); return true; }
-        return false;
+        boolean removed = users.removeIf(u -> u.getId() == id);
+        if (removed) {
+            reassignIds();
+        }
+        saveUsers();
+        return removed;
+    }
+
+    private static void reassignIds() {
+        for (int i = 0; i < users.size(); i++) {
+            User u = users.get(i);
+            users.set(i, new User(i + 1, u.getName(), u.getRole(), u.getPassword()));
+        }
     }
 
     public static synchronized boolean changePassword(int id, String newPass) {
-        User u = findById(id);
-        if (u == null) return false;
-        users.set(users.indexOf(u), new User(u.getId(), u.getName(), u.getRole(), newPass));
-        return true;
+        if (newPass == null || newPass.isBlank()) {
+            return false;
+        }
+        for (int i = 0; i < users.size(); i++) {
+            User u = users.get(i);
+            if (u.getId() == id) {
+                users.set(i, new User(id, u.getName(), u.getRole(), newPass));
+                saveUsers();
+                return true;
+            }
+        }
+        return false;
     }
 
     public static synchronized ArrayList<User> getAllUsers() {
@@ -46,36 +81,66 @@ public class AuthService {
     }
 
     public static synchronized User findById(int id) {
-        for (User u : users) if (u.getId() == id) return u;
+        for (User u : users) {
+            if (u.getId() == id) {
+                return u;
+            }
+        }
         return null;
     }
 
-    public static void saveUsers() {
+    public static synchronized void saveUsers() {
         try {
-            File dir = new File("data"); if (!dir.exists()) dir.mkdir();
+            File dir = new File("data");
+            if (!dir.exists()) {
+                boolean created = dir.mkdir();
+                if (!created) {
+                    System.out.println("Failed to create data directory.");
+                    return;
+                }
+            }
+
             BufferedWriter bw = new BufferedWriter(new FileWriter(USER_FILE));
-            for (User u : users)
-                bw.write(u.getId() + "|" + u.getName() + "|" + u.getRole() + "|" + u.getPassword() + "\n");
+            for (User u : users) {
+                bw.write(u.getId() + "|" + u.getName() + "|" + u.getRole() + "|" + u.getPassword());
+                bw.newLine();
+            }
             bw.close();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            System.out.println("Failed to save users due to an I/O error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Failed to save users: " + e.getMessage());
+        }
     }
 
-    public static void loadUsers() {
+    public static synchronized void loadUsers() {
         File f = new File(USER_FILE);
-        if (!f.exists()) return;
+        if (!f.exists()) {
+            return;
+        }
+
         try {
             BufferedReader br = new BufferedReader(new FileReader(f));
-            String line; int maxId = 0;
+            String line;
+            users.clear();
+
             while ((line = br.readLine()) != null) {
                 String[] p = line.split("\\|");
-                if (p.length != 4) continue;
-                int id = Integer.parseInt(p[0]);
-                String name = p[1], role = p[2], pass = p[3];
-                users.add(new User(id, name, role, pass));
-                if (id > maxId) maxId = id;
+                if (p.length != 4) {
+                    System.out.println("Skipping invalid line in users file: " + line);
+                    continue;
+                }
+                users.add(new User(0, p[1], p[2], p[3]));
             }
-            userSeq.set(maxId + 1);
+
+            reassignIds();
             br.close();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (FileNotFoundException e) {
+            System.out.println("Users file not found: " + e.getMessage());
+        } catch (IOException e) {
+            System.out.println("Failed to load users due to an I/O error: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Failed to load users: " + e.getMessage());
+        }
     }
 }
