@@ -6,8 +6,8 @@ import java.io.*;
 
 public class AuthService {
 
-    private static final ArrayList<User> users = new ArrayList<>();
-    private static final String USER_FILE = "data/users.txt";
+    private static ArrayList<User> users = new ArrayList<>();
+    private static String USER_FILE = "data/users.txt";
 
     public static synchronized int register(String name, String role, String password) {
         if (name == null || name.isBlank() || password == null || password.isBlank()) {
@@ -89,7 +89,7 @@ public class AuthService {
         return null;
     }
 
-    public static void saveUsers() {
+    public static synchronized void saveUsers() {
         try {
             File dir = new File("data");
             if (!dir.exists()) {
@@ -113,7 +113,7 @@ public class AuthService {
         }
     }
 
-    public static void loadUsers() {
+    public static synchronized void loadUsers() {
         File f = new File(USER_FILE);
         if (!f.exists()) {
             return;
