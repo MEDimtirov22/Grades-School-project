@@ -1,146 +1,138 @@
 package presentation;
 
+import data.DatabaseConnection;
 import data.User;
+
+import java.sql.*;
 import java.util.ArrayList;
-import java.io.*;
+import java.util.List;
 
 public class AuthService {
 
-    private static ArrayList<User> users = new ArrayList<>();
-    private static String USER_FILE = "data/users.txt";
-
-    public static synchronized int register(String name, String role, String password) {
+    public static int register(String name, String role, String password) {
         if (name == null || name.isBlank() || password == null || password.isBlank()) {
             return -2;
         }
-
-        if (role == null) {
-            return -1;
-        }
         role = role.toLowerCase();
-
         if (!role.equals("student") && !role.equals("teacher")) {
             return -1;
         }
 
-        for (User u : users) {
-            if (u.getName().equals(name) && u.getRole().equals(role)) {
+        String sqlCheck = "SELECT COUNT(*) FROM users WHERE name = ? AND role = ?";
+        String sqlInsert = "INSERT INTO users (name, role, password) VALUES (?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement check = conn.prepareStatement(sqlCheck);
+             PreparedStatement insert = conn.prepareStatement(sqlInsert)) {
+
+            check.setString(1, name);
+            check.setString(2, role);
+            ResultSet rs = check.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
                 return 0;
             }
-        }
 
-        int newId = users.size() + 1;
-        User nu = new User(newId, name, role, password);
-        users.add(nu);
-        saveUsers();
-        return 1;
+            insert.setString(1, name);
+            insert.setString(2, role);
+            insert.setString(3, password);
+            insert.executeUpdate();
+            return 1;
+        } catch (SQLException e) {
+            System.out.println("Error during registration: " + e.getMessage());
+            return -3;
+        }
     }
 
-    public static synchronized User login(String name, String password, String role) {
-        for (User u : users) {
-            if (u.getName().equals(name) && u.getPassword().equals(password) && u.getRole().equals(role)) {
-                return u;
+    public static User login(String name, String password, String role) {
+        String sql = "SELECT id, name, role, password FROM users WHERE name = ? AND role = ? AND password = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, name);
+            stmt.setString(2, role.toLowerCase());
+            stmt.setString(3, password);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return new User(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("role"),
+                    rs.getString("password")
+                );
             }
+        } catch (SQLException e) {
+            System.out.println("Error during login: " + e.getMessage());
         }
         return null;
     }
 
-    public static synchronized boolean deleteUser(int id) {
-        boolean removed = users.removeIf(u -> u.getId() == id);
-        if (removed) {
-            reassignIds();
-        }
-        saveUsers();
-        return removed;
-    }
-
-    private static void reassignIds() {
-        for (int i = 0; i < users.size(); i++) {
-            User u = users.get(i);
-            users.set(i, new User(i + 1, u.getName(), u.getRole(), u.getPassword()));
+    public static boolean deleteUser(int id) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error deleting user: " + e.getMessage());
+            return false;
         }
     }
 
-    public static synchronized boolean changePassword(int id, String newPass) {
+    public static boolean changePassword(int id, String newPass) {
         if (newPass == null || newPass.isBlank()) {
             return false;
         }
-        for (int i = 0; i < users.size(); i++) {
-            User u = users.get(i);
-            if (u.getId() == id) {
-                users.set(i, new User(id, u.getName(), u.getRole(), newPass));
-                saveUsers();
-                return true;
-            }
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newPass);
+            stmt.setInt(2, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error changing password: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
-    public static synchronized ArrayList<User> getAllUsers() {
-        return new ArrayList<>(users);
-    }
+    public static List<User> getAllUsers() {
+        List<User> list = new ArrayList<>();
+        String sql = "SELECT id, name, role, password FROM users ORDER BY id";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
-    public static synchronized User findById(int id) {
-        for (User u : users) {
-            if (u.getId() == id) {
-                return u;
+            while (rs.next()) {
+                list.add(new User(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("role"),
+                    rs.getString("password")
+                ));
             }
+        } catch (SQLException e) {
+            System.out.println("Error loading users: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public static User findById(int id) {
+        String sql = "SELECT id, name, role, password FROM users WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return new User(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("role"),
+                    rs.getString("password")
+                );
+            }
+        } catch (SQLException e) {
+            System.out.println("Error finding user: " + e.getMessage());
         }
         return null;
-    }
-
-    public static synchronized void saveUsers() {
-        try {
-            File dir = new File("data");
-            if (!dir.exists()) {
-                boolean created = dir.mkdir();
-                if (!created) {
-                    System.out.println("Failed to create data directory.");
-                    return;
-                }
-            }
-
-            BufferedWriter bw = new BufferedWriter(new FileWriter(USER_FILE));
-            for (User u : users) {
-                bw.write(u.getId() + "|" + u.getName() + "|" + u.getRole() + "|" + u.getPassword());
-                bw.newLine();
-            }
-            bw.close();
-        } catch (IOException e) {
-            System.out.println("Failed to save users due to an I/O error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Failed to save users: " + e.getMessage());
-        }
-    }
-
-    public static synchronized void loadUsers() {
-        File f = new File(USER_FILE);
-        if (!f.exists()) {
-            return;
-        }
-
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(f));
-            String line;
-            users.clear();
-
-            while ((line = br.readLine()) != null) {
-                String[] p = line.split("\\|");
-                if (p.length != 4) {
-                    System.out.println("Skipping invalid line in users file: " + line);
-                    continue;
-                }
-                users.add(new User(0, p[1], p[2], p[3]));
-            }
-
-            reassignIds();
-            br.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("Users file not found: " + e.getMessage());
-        } catch (IOException e) {
-            System.out.println("Failed to load users due to an I/O error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Failed to load users: " + e.getMessage());
-        }
     }
 }

@@ -8,8 +8,6 @@ public class ConsoleUI {
 
     public static void start() {
         Scanner sc = new Scanner(System.in);
-        AuthService.loadUsers();
-        GradeService.loadGrades();
 
         while (true) {
             User current = null;
@@ -140,7 +138,12 @@ public class ConsoleUI {
                     System.out.println("An error occurred while updating the grade.");
                     continue;
                 }
-                System.out.println(updated ? "Updated." : "Grade not found.");
+                if(updated){
+                    System.out.println("Updated.");
+                }
+                else{
+                    System.out.println("Grade not found.");
+                }
             }
 
             if (c.equals("3")) {
@@ -157,7 +160,12 @@ public class ConsoleUI {
                         System.out.println("An error occurred while deleting the grade.");
                         continue;
                     }
-                    System.out.println(deleted ? "Deleted." : "Grade not found.");
+                    if(deleted){
+                        System.out.println("Deleted.");
+                    }
+                    else{
+                        System.out.println("Grade not found.");
+                    }
                 }
             }
 
@@ -187,7 +195,12 @@ public class ConsoleUI {
                         System.out.println("An error occurred while deleting the user.");
                         continue;
                     }
-                    System.out.println(deleted ? "User deleted." : "User not found.");
+                    if(deleted){
+                    System.out.println("User deleted.");
+                    }
+                    else{
+                    System.out.println("User not found.");
+                    }
                 }
             }
 
@@ -201,7 +214,11 @@ public class ConsoleUI {
                     System.out.println("An error occurred while changing password.");
                     continue;
                 }
-                System.out.println(changed ? "Password changed." : "Invalid password.");
+                if (changed) {
+                System.out.println("Password changed.");
+                } else {
+                System.out.println("Invalid password.");
+                }
             }
         }
     }
@@ -216,7 +233,9 @@ public class ConsoleUI {
             System.out.print("Choice: ");
             String c = sc.nextLine();
 
-            if (c.equals("0")) return;
+            if (c.equals("0")){
+                return;
+            } 
 
             if (c.equals("1")) {
                 var g = GradeService.getGradesByStudent(u.getId());
@@ -254,7 +273,11 @@ public class ConsoleUI {
                     System.out.println("An error occurred while changing password.");
                     continue;
                 }
-                System.out.println(changed ? "Password changed." : "Invalid password.");
+                if (changed) {
+                    System.out.println("Password changed.");
+                } else {
+                    System.out.println("Invalid password.");
+                }
             }
         }
     }
