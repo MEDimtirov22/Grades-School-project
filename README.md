@@ -21,6 +21,11 @@
 <a href="https://github.com/"><img src="https://img.icons8.com/nolan/344/github.png" alt="GitHub logo" width=52px /></a>
 </p>
 
+## 📁 Project Layout
+
+<p align="center">
+    <img src="./docs/projectlayout.png" alt="Project Structure" width="600" />
+</p>
 
 ### Used technologies for development
 <p align="left">
